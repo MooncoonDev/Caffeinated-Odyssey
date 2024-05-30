@@ -1,30 +1,45 @@
 from fastapi.testclient import TestClient
-from main import get_application
+
+from main import get_client_application, get_worker_application
+
 
 def test_create_order():
-    app = get_application()
-    client = TestClient(app)
-    response = client.post("/order", json={"name": "latte", "description": "yum", "price": 4.00})
+    client_app = get_client_application()
+    client = TestClient(client_app)
+    response = client.post("/order", json={"name": "americano", "description": "yum", "price": 4.00})
     assert response.status_code == 200
-    assert 'id' in response.json()
+    assert response.json() == {"message": "Order received"}
+
 
 def test_rate_limiting():
-    app = get_application()
-    client = TestClient(app)
+    client_app = get_client_application()
+    normal_client = TestClient(client_app)
+    ddoser_client = TestClient(client_app, base_url="http://DELUSIONAL_DDOSER_IP")
+
+    for i in range(10):
+        response = normal_client.post("/order", json={"name": "americano", "description": "yum", "price": 4.00})
+        assert response.status_code == 200
+
     for i in range(11):
-        response = client.post("/order", json={"name": "latte", "description": "yum", "price": 4.00})
+        response = ddoser_client.post("/order", json={"name": "americano", "description": "yum", "price": 4.00})
     assert response.status_code == 429
     assert 'Rate limit exceeded' in response.json()['error']
 
-def test_get_order():
-    app = get_application()
-    client = TestClient(app)
-    new_order = {"name": "latte", "description": "yum", "price": 4.00}
-    create_resp = client.post("/order", json=new_order)
-    assert create_resp.status_code == 200
-    assert 'id' in create_resp.json()
-    new_id = create_resp.json()["id"]
 
-    get_resp = client.get(f"/orders/{new_id}")
-    assert get_resp.status_code == 200
-    assert get_resp.json()["name"] == new_order["name"]
+def test_worker_flow():
+    client_app = get_client_application()
+    worker_app = get_worker_application()
+    client = TestClient(client_app)
+    worker = TestClient(worker_app)
+
+    response = client.post("/order", json={"name": "americano", "description": "yum", "price": 4.00})
+    assert response.status_code == 200
+
+    response = worker.get("/start")
+    assert response.status_code == 200
+    order = response.json()
+    assert order["status"] == "in_progress"
+
+    response = worker.post(f"/finish?order_id={order['id']}")
+    assert response.status_code == 200
+    assert response.json()["status"] == "ready"
