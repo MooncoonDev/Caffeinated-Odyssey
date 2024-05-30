@@ -9,5 +9,3 @@ The client FastAPI server will run on port 8000, and the worker FastAPI server w
 
 ### Deployment
 The provided Dockerfile can be used to build and run the application in a Docker container.
-
-To protect against DoS attacks like the "delusional DDoSer", consider using a tool like nginx to throttle or block excessive requests from a single IP address.
