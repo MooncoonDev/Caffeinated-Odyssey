@@ -1,1 +1,4 @@
-# Caffeinated-Odyssey
+# Caffeinated Odyssey
+
+## Setup
+

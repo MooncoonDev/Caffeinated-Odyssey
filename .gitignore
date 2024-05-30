@@ -182,3 +182,4 @@ zsdoc/data
 !/tests/_output/.gitkeep
 
 .idea/
+/.run/Test.run.xml
